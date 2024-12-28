@@ -1,1 +1,2 @@
-# Biblioteka_kart
+# Biblioteka_kart (Protokoły sieci Web)
+Maksymilian Janica
