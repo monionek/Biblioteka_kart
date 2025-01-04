@@ -4,7 +4,7 @@ import mongoose, { Document, Schema } from 'mongoose';
 interface ICard extends Document {
     name: string;
     rarity: string;
-    color: string;
+    color: string[];
     type: string;
     cost: object;
     attack: number;
@@ -15,7 +15,7 @@ interface ICard extends Document {
 const CardSchema = new Schema<ICard>({
     name: { type: String, required: true, unique: true },
     rarity: { type: String, required: true, unique: false },
-    color: { type: String, required: false, unique: false },
+    color: { type: [{ type: String }], required: true, unique: false },
     type: { type: String, required: true, unique: false },
     cost: { type: Object, required: false, unique: false },
     attack: { type: Number, required: false, unique: false },
