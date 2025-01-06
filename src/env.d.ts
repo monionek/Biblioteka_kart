@@ -4,5 +4,7 @@ declare namespace NodeJS {
         MONGO_URL: string; // Required database connection URL
         ALLOWED_RARITY: string;
         ALLOWED_COLORS: string;
+        JWT_SECRET: string;
+        JWT_EXPIRATION: string;
     }
 }
