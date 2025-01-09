@@ -26,8 +26,8 @@ mongoose.connect(mongoUrl).then(() => {
 
 app.use(express.json());
 
-//CRUD usera
-//dodawanie nowego użytkownika
+//CRUD user
+//adding new users
 app.post('/users', createEmailChain(), createNameChain(), createPasswordChain(), async (req: Request, res: Response) => {
     const errors = validationResult(req);
 
@@ -46,7 +46,7 @@ app.post('/users', createEmailChain(), createNameChain(), createPasswordChain(),
     }
 }
 );
-//szukanie użytkownika po id lub nazwie
+//searching user by name or email
 app.get('/users/:selector', async (req: Request, res: Response) => {
     const selector = req.params.selector;
     try {
@@ -64,7 +64,7 @@ app.get('/users/:selector', async (req: Request, res: Response) => {
     }
 });
 
-//modyfikowanie użytkownika
+//modifying users
 app.patch('/users/:selector', body('email').optional().isEmail().withMessage("Invalid Email Format"), async (req: Request, res: Response) => {
     const errors = validationResult(req);
     if (!errors.isEmpty()) {
@@ -75,10 +75,7 @@ app.patch('/users/:selector', body('email').optional().isEmail().withMessage("In
             const updatedUser = await User.findOneAndUpdate(
                 { $or: [{ name: selector }, { email: { $regex: `^${selector}$`, $options: 'i' } }] },
                 {
-                    $set: {
-                        name: req.body.name,
-                        email: req.body.email
-                    }
+                    $set: { ...req.body }
                 },
                 { new: true }
             );
@@ -95,7 +92,7 @@ app.patch('/users/:selector', body('email').optional().isEmail().withMessage("In
     }
 });
 
-
+// Deleting user
 app.delete('/users/:selector', async (req: Request, res: Response) => {
     const selector = decodeURIComponent(req.params.selector);
     try {
@@ -113,9 +110,9 @@ app.delete('/users/:selector', async (req: Request, res: Response) => {
     }
 })
 
-//CRUD kart
+//CRUD Cards
 
-// dodawanie karty dziala
+// adding cards
 app.post('/library', creatingCardValidationSchema(), async (req: Request, res: Response) => {
     const errors = validationResult(req);
     if (!errors.isEmpty()) {
@@ -147,7 +144,7 @@ app.post('/library', creatingCardValidationSchema(), async (req: Request, res: R
         }
     }
 });
-// pobranie karty dziala
+// geting card from database using attack, toughness, rarity or name
 app.get('/library/:selector', async (req: Request, res: Response) => {
     const selector = req.params.selector;
 
@@ -155,12 +152,10 @@ app.get('/library/:selector', async (req: Request, res: Response) => {
     const numericSelector = parseInt(selector);
 
     try {
-        // Build the query dynamically based on the type of the selector
         const query: any = {
             $or: []
         };
 
-        // If the selector is a number (check if it's a valid number for attack or toughness)
         if (!isNaN(numericSelector)) {
             query.$or.push(
                 { attack: numericSelector },
@@ -168,17 +163,13 @@ app.get('/library/:selector', async (req: Request, res: Response) => {
             );
         }
 
-        // Add string-based search for name and rarity (case-insensitive)
-        // Ensure the regex works with multiple words, including whitespaces
         query.$or.push(
             { name: { $regex: new RegExp(selector, 'i') } },
             { rarity: { $regex: new RegExp(selector, 'i') } }
         );
 
-        // Perform the query
         const foundedCards = await Card.find(query);
 
-        // Return the response based on the search result
         if (foundedCards.length !== 0) {
             res.status(200).json(foundedCards);
         } else {
@@ -189,7 +180,8 @@ app.get('/library/:selector', async (req: Request, res: Response) => {
         res.status(500).json({ message: "An error occurred while searching for the card" });
     }
 });
-//modyfikowanie karty
+
+//modifying cards
 app.patch('/library/:name', updatingCardValidationSchema(), async (req: Request, res: Response) => {
     const errors = validationResult(req);
     if (!errors.isEmpty()) {
@@ -199,7 +191,7 @@ app.patch('/library/:name', updatingCardValidationSchema(), async (req: Request,
         try {
             const updatedCard = await Card.findOneAndUpdate(
                 { name: cardName },
-                { $set: { ...req.body } }, // Przekazujesz całe body zamiast ręcznie ustawiać pola
+                { $set: { ...req.body } },
                 { new: true }
             );
 
@@ -217,7 +209,7 @@ app.patch('/library/:name', updatingCardValidationSchema(), async (req: Request,
     }
 })
 
-// //usuwanie karty
+// deleting cards
 app.delete('/library/:name', async (req: Request, res: Response) => {
     const cardName = decodeURIComponent(req.params.name);
     try {
@@ -234,7 +226,7 @@ app.delete('/library/:name', async (req: Request, res: Response) => {
         res.status(500).json({ message: "An error occurred while deleting the card" });
     }
 })
-//CRUD talii
+//CRUD decks
 //adding new deck
 app.post(
     '/users/:selector/decks',
@@ -256,7 +248,7 @@ app.post(
 
             if (findUser) {
                 const newDeck = new Deck({
-                    deckName: req.body.deckname, // Poprawione na body
+                    deckName: req.body.deckname,
                     owner: findUser.name,
                     cardList: []
                 });
@@ -280,29 +272,24 @@ app.post(
     }
 );
 
-//searching one deck of a user
+//searching one deck of a user by name
 app.get('/users/:selector/decks/:deckname', async (req: Request, res: Response) => {
     const userSelector = decodeURIComponent(req.params.selector);
     const deckName = decodeURIComponent(req.params.deckname);
     try {
-        // Szukaj użytkownika po nazwie lub id
         const findUser = await User.findOne({
             $or: [{ name: userSelector }, { email: { $regex: `^${userSelector}$`, $options: 'i' } }]
         });
 
         if (findUser) {
-            // Szukaj talii po nazwie deckname
             const findDeck = await Deck.findOne({ deckName: deckName, owner: findUser.name });
 
             if (findDeck) {
-                // Zwróć znalezioną talię
                 res.status(200).json(findDeck.cardList);
             } else {
-                // Jeśli nie znaleziono talii
                 res.status(404).json({ message: "Deck not found" });
             }
         } else {
-            // Jeśli nie znaleziono użytkownika
             res.status(404).json({ message: "User not found" });
         }
     } catch (error) {
@@ -315,7 +302,6 @@ app.get('/users/:selector/decks/:deckname', async (req: Request, res: Response) 
 app.get('/users/:selector/decks', async (req: Request, res: Response) => {
     const userSelector = decodeURIComponent(req.params.selector);
     try {
-        // Szukaj użytkownika po nazwie lub id
         const findUser = await User.findOne({
             $or: [{ name: userSelector }, { email: { $regex: `^${userSelector}$`, $options: 'i' } }],
         });
@@ -337,7 +323,8 @@ app.get('/users/:selector/decks', async (req: Request, res: Response) => {
     }
 });
 //modyfing cardlist inside a deck
-// Dodawanie kart do talii
+
+// adding card into a deck
 app.patch('/users/:selector/decks/:deckname/add-cards',
     body('cardlist')
         .isArray().withMessage("card list must be provided in an array")
@@ -387,7 +374,8 @@ app.patch('/users/:selector/decks/:deckname/add-cards',
         }
     }
 );
-// Usuwanie kart z talii
+
+// delete cards from deck
 app.patch('/users/:selector/decks/:deckname/remove-cards',
     body('cardlist')
         .isArray().withMessage("card list must be provided in an array")
@@ -477,7 +465,7 @@ app.post('/users/login', async (req: Request, res: Response) => {
                 res.status(401).json({ message: "Invalid password" });
             } else {
                 const token = jwt.sign(
-                    { id: user._id, email: user.email },
+                    { id: user._id, email: user.email, role: user.role },
                     process.env.JWT_SECRET!,
                     { expiresIn: process.env.JWT_EXPIRATION || '1h' }
                 );
@@ -489,7 +477,7 @@ app.post('/users/login', async (req: Request, res: Response) => {
         res.status(500).json({ message: "An error occurred during login" });
     }
 });
-//uruchamianie aplikacji
+//start application
 app.listen(port, () => {
     console.log(`Server is running on http://localhost:${port}`);
 });
