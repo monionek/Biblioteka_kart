@@ -1,6 +1,6 @@
 import express, { Request, Response, NextFunction } from 'express';
 import jwt from 'jsonwebtoken';
-import dotenv, { config } from "dotenv";
+import dotenv from "dotenv";
 
 dotenv.config();
 
@@ -15,12 +15,12 @@ const verifyJWT = (req: Request, res: Response, next: Function) => {
         } else {
             const secret = process.env.JWT_SECRET;
             try {
-                const decoded = jwt.verify(token, secret!) as { id: string; role: string; email: string };
+                const decoded = jwt.verify(token, secret!) as { id: string; role: string; name: string };
 
                 req.user = {
                     id: decoded.id,
                     role: decoded.role,
-                    email: decoded.email,
+                    name: decoded.name,
                 };
 
                 next();
@@ -31,3 +31,5 @@ const verifyJWT = (req: Request, res: Response, next: Function) => {
         };
     }
 }
+
+export default verifyJWT

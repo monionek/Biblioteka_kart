@@ -1,21 +1,41 @@
-GET http://localhost:3000/users/Maks
+GET https://localhost:8443/users/Maks
+Authorization: Bearer "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6IjY3ODJiYTA3NjI1Y2ZlMWZiNDMwMGJkZSIsInJvbGUiOiJ1c2VyIiwibmFtZSI6IkFkbWluIiwiaWF0IjoxNzM2NjIwNTYzLCJleHAiOjE3MzY2MjQxNjN9.FX6AkmQa279KITWfFmQm-lGjQj41tYQYM42F6gpb44g"
 
 ###
 
-POST http://localhost:3000/users
+POST https://localhost:8443/users
 Content-Type: application/json
 
 {
-    "name": "Maks",
-    "email": "Maks@example.com",
+    "name": "Admin",
+    "email": "admin@example.com",
+    "password": "password",
+    "role": "admin"
+}
+
+####
+POST https://localhost:8443/users/login
+Content-Type: application/json
+
+{
+    "name": "Admin",
     "password": "password"
 }
 
 ####
-POST http://localhost:3000/users/login
+POST https://localhost:8443/users/login
 Content-Type: application/json
 
 {
     "name": "Maks",
     "password": "password"
+}
+
+####
+PATCH https://localhost:8443/users/Maks
+Authorization: Bearer "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6IjY3ODJiYTA3NjI1Y2ZlMWZiNDMwMGJkZSIsInJvbGUiOiJ1c2VyIiwibmFtZSI6IkFkbWluIiwiaWF0IjoxNzM2NjIwOTY3LCJleHAiOjE3MzY2MjQ1Njd9.LEnvg-EYZpWLEAwqv1G8daWDfC0aR4E1e0MK8B6RC04"
+Content-Type: application/json
+
+{
+    "name": "Marek"
 }
