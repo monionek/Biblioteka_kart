@@ -501,7 +501,7 @@ app.post('/users/login', async (req: Request, res: Response) => {
                     { expiresIn: process.env.JWT_EXPIRATION || '1h' }
                 );
                 console.log(`login successful, ${user.name}`);
-                res.status(200).json({ message: "Login successful", token });
+                res.status(200).json({ token });
             }
         }
     } catch (error) {
