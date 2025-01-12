@@ -13,6 +13,13 @@ import creatingCardValidationSchema from "../utils/creatingCardValidationSchema"
 import { createEmailChain, createNameChain, createPasswordChain } from "../utils/creatingUserChains";
 import { hashPassword, verifyPassword } from "../utils/cryptingPassword";
 import verifyJWT from '../utils/veryfingJSW';
+import cors from 'cors';
+
+const corsOptions = {
+    origin: 'https://172.20.44.64:3000',  // frontend URL, z którego będą pochodziły zapytania
+    methods: ['GET', 'POST', 'PUT', 'DELETE'],
+    allowedHeaders: ['Content-Type', 'Authorization'],  // Dozwolone nagłówki
+};
 
 const app = express();
 dotenv.config();
@@ -30,7 +37,7 @@ mongoose.connect(mongoUrl).then(() => {
     console.log(error);
 })
 
-app.use(express.json());
+app.use(express.json(), cors(corsOptions));
 
 //CRUD user
 //adding new users
@@ -481,7 +488,7 @@ app.delete('decks/:deckname', async (req: Request, res: Response) => {
     }
 });
 //user login
-app.post('/users/login', async (req: Request, res: Response) => {
+app.post('/login', async (req: Request, res: Response) => {
     const { name, password } = req.body;
 
     try {
@@ -501,7 +508,7 @@ app.post('/users/login', async (req: Request, res: Response) => {
                     { expiresIn: process.env.JWT_EXPIRATION || '1h' }
                 );
                 console.log(`login successful, ${user.name}`);
-                res.status(200).json({ token });
+                res.status(200).json({ "token": token });
             }
         }
     } catch (error) {
@@ -509,7 +516,7 @@ app.post('/users/login', async (req: Request, res: Response) => {
         res.status(500).json({ message: "An error occurred during login" });
     }
 });
-//start application
+// start application
 https.createServer(credentials, app).listen(port, () => {
     console.log(`Server running at https://localhost:${port}`);
 });
