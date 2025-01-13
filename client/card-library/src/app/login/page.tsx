@@ -8,6 +8,7 @@ async function login(username: string, password: string) {
         // Zapisujemy token do localStorage
         if (response.data.token) {
             localStorage.setItem('jwt', response.data.token);
+            console.log(response.data.token)
             return true;
         }
         return false;

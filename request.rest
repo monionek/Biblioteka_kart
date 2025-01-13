@@ -1,5 +1,5 @@
 GET https://localhost:8443/users/Maks
-Authorization: Bearer "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6IjY3ODJiYTA3NjI1Y2ZlMWZiNDMwMGJkZSIsInJvbGUiOiJ1c2VyIiwibmFtZSI6IkFkbWluIiwiaWF0IjoxNzM2NjIwNTYzLCJleHAiOjE3MzY2MjQxNjN9.FX6AkmQa279KITWfFmQm-lGjQj41tYQYM42F6gpb44g"
+
 
 ###
 
@@ -14,7 +14,7 @@ Content-Type: application/json
 }
 
 ####
-POST https://localhost:8443/users/login
+POST https://localhost:8443/login
 Content-Type: application/json
 
 {
@@ -33,9 +33,15 @@ Content-Type: application/json
 
 ####
 PATCH https://localhost:8443/users/Maks
-Authorization: Bearer "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6IjY3ODJiYTA3NjI1Y2ZlMWZiNDMwMGJkZSIsInJvbGUiOiJ1c2VyIiwibmFtZSI6IkFkbWluIiwiaWF0IjoxNzM2NjIwOTY3LCJleHAiOjE3MzY2MjQ1Njd9.LEnvg-EYZpWLEAwqv1G8daWDfC0aR4E1e0MK8B6RC04"
+Authorization: Bearer "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6IjY3ODJiYTA3NjI1Y2ZlMWZiNDMwMGJkZSIsInJvbGUiOiJhZG1pbiIsIm5hbWUiOiJBZG1pbiIsImlhdCI6MTczNjc5NjU1MSwiZXhwIjoxNzM2ODAwMTUxfQ.ghuh0-6JceNsDIaunR3lwrZRORnTwGlKsVr7TDaEPs0"
 Content-Type: application/json
 
 {
     "name": "Marek"
 }
+
+####
+GET https://localhost:8443/library/common
+
+####
+GET https://localhost:8443/users/Admin/decks/Deck1

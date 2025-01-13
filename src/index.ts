@@ -17,7 +17,7 @@ import cors from 'cors';
 
 const corsOptions = {
     origin: 'https://172.20.44.64:3000',  // frontend URL, z którego będą pochodziły zapytania
-    methods: ['GET', 'POST', 'PUT', 'DELETE'],
+    methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE'],
     allowedHeaders: ['Content-Type', 'Authorization'],  // Dozwolone nagłówki
 };
 
@@ -66,7 +66,7 @@ app.post('/users', createEmailChain(), createNameChain(), createPasswordChain(),
             }
         } catch (error) {
             console.log('error while creating user', error);
-            res.status(500).json({ message: `Error while creating new user` });
+            res.status(400).json({ message: `Error while creating new user` });
         }
     }
 }
@@ -76,7 +76,7 @@ app.get('/users/:selector', async (req: Request, res: Response) => {
     const selector = req.params.selector;
     try {
         const foundUser = await User.findOne({
-            $or: [{ name: selector }]
+            $or: [{ name: selector }, { email: { $regex: `^${selector}$`, $options: 'i' } }]
         });
         if (foundUser) {
             console.log('user found');
@@ -87,7 +87,7 @@ app.get('/users/:selector', async (req: Request, res: Response) => {
         }
     } catch (error) {
         console.error('error while searching user ', error);
-        res.status(500).json({ message: "An error occurred while searching user" });
+        res.status(400).json({ message: "An error occurred while searching user" });
     }
 });
 
@@ -96,12 +96,12 @@ app.patch('/users/:selector', verifyJWT, body('email').optional().isEmail().with
     const errors = validationResult(req);
     if (!errors.isEmpty()) {
         console.log('Validation error');
-        res.status(500).json({ errors: errors.array() });
+        res.status(400).json({ errors: errors.array() });
     } else if (req.user?.role === "admin" || req.user?.role === "moderator") {
         const selector = decodeURIComponent(req.params.selector);
         try {
             const updatedUser = await User.findOneAndUpdate(
-                { $or: [{ name: selector }, { email: { $regex: `^${selector}$`, $options: 'i' } }] },
+                { $or: [{ name: selector }, { email: { $regex: `^${selector}$`, $options: 'i' } }, { role: selector }] },
                 {
                     $set: { ...req.body }
                 },
@@ -117,7 +117,7 @@ app.patch('/users/:selector', verifyJWT, body('email').optional().isEmail().with
             }
         } catch (error) {
             console.error('error while updating user ', error);
-            res.status(500).json({ message: "An error occurred while updating the user" });
+            res.status(400).json({ message: "An error occurred while updating the user" });
         }
     } else {
         console.log('access denied');
@@ -144,7 +144,7 @@ app.delete('/users/:selector', verifyJWT, async (req: Request, res: Response) =>
             }
         } catch (error) {
             console.error("Error deleting user:", error);
-            res.status(500).json({ message: "An error occurred while deleting the user" });
+            res.status(400).json({ message: "An error occurred while deleting the user" });
         }
     }
 })
@@ -179,19 +179,18 @@ app.post('/library', creatingCardValidationSchema(), async (req: Request, res: R
                     res.status(201).json({ message: `new card added to library card:${newCard}` });
                 } else {
                     console.log("card couldn't be added to library");
-                    res.status(500).json({ message: "An error occurred while adding card to library" });
+                    res.status(400).json({ message: "An error occurred while adding card to library" });
                 }
             } catch (error) {
                 console.error("Error while adding card to library:", error);
-                res.status(500).json({ message: "An error occurred while adding card to library" });
+                res.status(400).json({ message: "An error occurred while adding card to library" });
             }
         }
     }
 });
 // geting card from database using attack, toughness, rarity or name
 app.get('/library/:selector', async (req: Request, res: Response) => {
-    const selector = req.params.selector;
-
+    const selector = decodeURIComponent(req.params.selector);
 
     const numericSelector = parseInt(selector);
 
@@ -200,30 +199,33 @@ app.get('/library/:selector', async (req: Request, res: Response) => {
             $or: []
         };
 
+        // Jeśli selektor jest liczbą, dodajemy warunki dla attack i toughness
         if (!isNaN(numericSelector)) {
             query.$or.push(
                 { attack: numericSelector },
                 { toughness: numericSelector }
             );
-        };
+        }
 
+        // Warunki dla rarity oraz name, rarity - z regexem dla nieścisłości wielkości liter
         query.$or.push(
-            { name: { $regex: new RegExp(selector, 'i') } },
-            { rarity: { $regex: new RegExp(selector, 'i') } }
+            { name: { $regex: new RegExp(selector, 'i') } },  // Zawiera nazwę
+            { rarity: { $regex: new RegExp(selector, 'i') } }  // Zawiera rarity
         );
 
+        // Przeszukujemy bazę danych
         const foundedCards = await Card.find(query);
 
         if (foundedCards.length !== 0) {
-            console.log('card founded');
+            console.log('Card(s) found');
             res.status(200).json(foundedCards);
         } else {
-            console.log('card not found');
+            console.log('Card not found');
             res.status(404).json({ message: "Card not found" });
         }
     } catch (error) {
-        console.error('error while searching card', error);
-        res.status(500).json({ message: "An error occurred while searching for the card" });
+        console.error('Error while searching card:', error);
+        res.status(400).json({ message: "An error occurred while searching for the card" });
     }
 });
 
@@ -251,7 +253,7 @@ app.patch('/library/:name', verifyJWT, updatingCardValidationSchema(), async (re
             }
         } catch (error) {
             console.error('error while updating card', error);
-            res.status(500).json({ message: "An error occurred while updating the Card" });
+            res.status(400).json({ message: "An error occurred while updating the Card" });
         }
     } else {
         res.status(401).json({ "message": "acces denied while modifying card" })
@@ -275,7 +277,7 @@ app.delete('/library/:name', async (req: Request, res: Response) => {
             }
         } catch (error) {
             console.error("error while deleting card:", error);
-            res.status(500).json({ message: "An error occurred while deleting the card" });
+            res.status(400).json({ message: "An error occurred while deleting the card" });
         }
     }
 })
@@ -308,26 +310,29 @@ app.post(
                     });
                 } else {
                     console.log('deck could not be saved');
-                    res.status(500).json({ message: "An error occurred while creating deck" });
+                    res.status(400).json({ message: "An error occurred while creating deck" });
                 }
             } catch (error) {
                 console.error("error while creating deck:", error);
-                res.status(500).json({ message: "An error occurred while creating deck" });
+                res.status(400).json({ message: "An error occurred while creating deck" });
             }
         }
     }
 );
 
-//searching one deck of a user by name
+//searching one deck of a user by name NIE DZIAŁĄ MUSZĘ POPRACOWAĆ NAD TYM
 app.get('users/:selector/decks/:deckname', async (req: Request, res: Response) => {
     const userSelector = decodeURIComponent(req.params.selector);
     const deckName = decodeURIComponent(req.params.deckname);
+    console.log('Selector:', userSelector);
+    console.log('Deck Name:', deckName);
     try {
         const findUser = await User.findOne({
             $or: [{ name: userSelector }, { email: { $regex: `^${userSelector}$`, $options: 'i' } }]
         });
 
         if (findUser) {
+            console.log('Found User:', findUser);
             const findDeck = await Deck.findOne({ deckName: deckName, owner: findUser.name });
 
             if (findDeck) {
@@ -343,7 +348,7 @@ app.get('users/:selector/decks/:deckname', async (req: Request, res: Response) =
         }
     } catch (error) {
         console.error("error while searching deck:", error);
-        res.status(500).json({ message: "An error occurred while searching deck" });
+        res.status(400).json({ message: "An error occurred while searching deck" });
     }
 });
 
@@ -371,7 +376,7 @@ app.get('/users/:selector/decks', async (req: Request, res: Response) => {
         }
     } catch (error) {
         console.error("error while searching decks:", error);
-        res.status(500).json({ message: "An error occurred while searching decks" });
+        res.status(400).json({ message: "An error occurred while searching decks" });
     }
 });
 //modyfing cardlist inside a deck
@@ -416,7 +421,7 @@ app.patch('decks/:deckname/add-cards',
                 }
             } catch (error) {
                 console.error("error while adding cards:", error);
-                res.status(500).json({ message: "An error occurred while adding cards" });
+                res.status(400).json({ message: "An error occurred while adding cards" });
             }
         }
     }
@@ -462,7 +467,7 @@ app.patch('decks/:deckname/remove-cards',
                 }
             } catch (error) {
                 console.error("error while removing cards:", error);
-                res.status(500).json({ message: "An error occurred while removing cards" });
+                res.status(400).json({ message: "An error occurred while removing cards" });
             }
         }
     }
@@ -484,7 +489,7 @@ app.delete('decks/:deckname', async (req: Request, res: Response) => {
         }
     } catch (error) {
         console.error("error while searching deck:", error);
-        res.status(500).json({ message: "An error occurred while searching deck" });
+        res.status(400).json({ message: "An error occurred while searching deck" });
     }
 });
 //user login
@@ -508,12 +513,12 @@ app.post('/login', async (req: Request, res: Response) => {
                     { expiresIn: process.env.JWT_EXPIRATION || '1h' }
                 );
                 console.log(`login successful, ${user.name}`);
-                res.status(200).json({ "token": token });
+                res.status(200).json({ token });
             }
         }
     } catch (error) {
         console.error("error during login:", error);
-        res.status(500).json({ message: "An error occurred during login" });
+        res.status(400).json({ message: "An error occurred during login" });
     }
 });
 // start application

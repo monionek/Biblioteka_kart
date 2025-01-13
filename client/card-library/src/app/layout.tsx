@@ -11,6 +11,7 @@ export default function RootLayout({
       <body>
         <div id="nav-bar">
           <Link href="/">Home</Link>
+          <Link href="/registration">Registration</Link>
           <Link href="/login">Login</Link>
           <Link href="/users">Users</Link>
           <Link href="/library">Library</Link>

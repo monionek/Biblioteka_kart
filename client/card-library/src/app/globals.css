@@ -1,24 +1,205 @@
-#nav-bar {
-  display: flex;
-  justify-content: left;
-  align-items: center;
-  margin: 20px;
-  padding: 10px;
-  gap: 50px;
-}
-#search-bar {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 100px;
+/* Ogólne ustawienia strony */
+body {
+    font-family: 'Arial', sans-serif;
+    background-color: #f4f4f9;
+    margin: 0;
+    padding: 0;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    min-height: 100vh;
+    color: #333;
 }
 
-#login-field {
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  flex-direction: column;
-  gap: 50px;
-  margin: 150px;
-  padding: 50px;
+/* Nawigacja */
+#nav-bar {
+    background-color: #007bff;
+    display: flex;
+    justify-content: center;
+    gap: 20px;
+    padding: 15px 20px;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+    width: 100%;
+    position: sticky;
+    top: 0;
+    z-index: 1000;
+}
+#start-page {
+    display: flex;
+    gap: 20px;
+    flex-direction: row;
+    justify-content: center;
+    align-items: center;
+}
+#nav-bar a {
+    color: white;
+    text-decoration: none;
+    font-size: 1em;
+    padding: 10px 20px;
+    border-radius: 4px;
+    transition: background-color 0.3s ease, color 0.3s ease;
+}
+
+#nav-bar a:hover {
+    background-color: #0056b3;
+    color: #e2e2e2;
+}
+
+/* Kontener dla stron */
+div {
+    background-color: #ffffff;
+    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
+    border-radius: 8px;
+    padding: 20px 40px;
+    width: 100%;
+    max-width: 800px;
+    margin: 20px auto;
+    text-align: center;
+}
+
+/* Nagłówki */
+h1 {
+    font-size: 2em;
+    color: #444;
+    margin-bottom: 20px;
+}
+
+h2 {
+    font-size: 1.6em;
+    color: #555;
+    margin-bottom: 15px;
+}
+
+/* Formularze */
+form {
+    display: flex;
+    flex-direction: column;
+    gap: 15px;
+    margin-bottom: 20px;
+}
+
+form input,
+form select {
+    width: 100%;
+    padding: 10px;
+    font-size: 1em;
+    border: 1px solid #ccc;
+    border-radius: 4px;
+    transition: border-color 0.3s ease;
+}
+
+form input:focus,
+form select:focus {
+    outline: none;
+    border-color: #007bff;
+}
+
+form button {
+    padding: 10px 15px;
+    font-size: 1em;
+    color: white;
+    background-color: #007bff;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    transition: background-color 0.3s ease;
+}
+
+form button:hover {
+    background-color: #0056b3;
+}
+
+/* Login Page */
+#login-button {
+    background-color: #28a745;
+}
+
+#login-button:hover {
+    background-color: #218838;
+}
+
+/* Strona użytkowników */
+#user-details {
+    margin-top: 20px;
+    padding: 15px;
+    border: 1px solid #ccc;
+    border-radius: 8px;
+    background-color: #f9f9f9;
+    text-align: left;
+}
+
+#user-details p {
+    margin: 5px 0;
+    font-size: 1em;
+    color: #333;
+}
+
+/* Opcje użytkownika */
+#user-options {
+    margin-top: 15px;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+#delete-user {
+    padding: 10px 15px;
+    font-size: 1em;
+    color: white;
+    background-color: #d9534f;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    transition: background-color 0.3s ease;
+}
+
+#delete-user:hover {
+    background-color: #c9302c;
+}
+
+/* Formularz modyfikacji użytkownika */
+#modify-user-form {
+    margin-top: 10px;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+#modify-user-form label {
+    font-size: 0.9em;
+    color: #555;
+}
+
+#modify-user {
+    background-color: #ffc107;
+    color: #333;
+}
+
+#modify-user:hover {
+    background-color: #e0a800;
+}
+
+/* Błędy */
+p {
+    margin-top: 15px;
+    color: #d9534f;
+    font-size: 0.9em;
+    font-weight: bold;
+}
+
+/* Responsywność */
+@media (max-width: 768px) {
+    div {
+        padding: 15px 20px;
+    }
+
+    #nav-bar {
+        flex-direction: column;
+        align-items: center;
+        gap: 10px;
+    }
+
+    form input {
+        width: 100%;
+    }
 }
