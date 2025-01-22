@@ -109,6 +109,7 @@ app.patch('/users/:selector', verifyJWT, body('email').optional().isEmail().with
             );
 
             if (updatedUser) {
+                const findDecks = await Deck.updateMany({ owner: selector }, { $set: { owner: req.body.name } })
                 console.log('user updated');
                 res.status(200).json({ message: "User data modified", user: updatedUser });
             } else {
@@ -152,7 +153,7 @@ app.delete('/users/:selector', verifyJWT, async (req: Request, res: Response) =>
 //CRUD Cards
 
 // adding cards
-app.post('/library', creatingCardValidationSchema(), async (req: Request, res: Response) => {
+app.post('/library', verifyJWT, creatingCardValidationSchema(), async (req: Request, res: Response) => {
     if (req.user?.role !== "admin") {
         res.status(401).json({ "message": "acces denied while adding card" });
     } else {
@@ -188,46 +189,42 @@ app.post('/library', creatingCardValidationSchema(), async (req: Request, res: R
         }
     }
 });
-// geting card from database using attack, toughness, rarity or name
-app.get('/library/:selector', async (req: Request, res: Response) => {
-    const selector = decodeURIComponent(req.params.selector);
+// getting card from database by name or rarity
+app.get(
+    '/library/:selector',
+    async (req: Request, res: Response) => {
+        const selector = req.params.selector; // Get selector from URL (e.g., 'name' or 'rarity')
+        const value = req.query.value as string; // Get the search value from query string (e.g., '?value=Ajani')
 
-    const numericSelector = parseInt(selector);
-
-    try {
-        const query: any = {
-            $or: []
-        };
-
-        // Jeśli selektor jest liczbą, dodajemy warunki dla attack i toughness
-        if (!isNaN(numericSelector)) {
-            query.$or.push(
-                { attack: numericSelector },
-                { toughness: numericSelector }
-            );
-        }
-
-        // Warunki dla rarity oraz name, rarity - z regexem dla nieścisłości wielkości liter
-        query.$or.push(
-            { name: { $regex: new RegExp(selector, 'i') } },  // Zawiera nazwę
-            { rarity: { $regex: new RegExp(selector, 'i') } }  // Zawiera rarity
-        );
-
-        // Przeszukujemy bazę danych
-        const foundedCards = await Card.find(query);
-
-        if (foundedCards.length !== 0) {
-            console.log('Card(s) found');
-            res.status(200).json(foundedCards);
+        if (!['name', 'rarity'].includes(selector)) {
+            res.status(400).json({ message: "Invalid selector. Use 'name' or 'rarity'." });
         } else {
-            console.log('Card not found');
-            res.status(404).json({ message: "Card not found" });
+
+            if (!value || typeof value !== 'string') {
+                res.status(400).json({ message: "Search value must be provided as a query parameter." });
+            } else {
+                try {
+                    const query: any = {
+                        [selector]: { $regex: new RegExp(value, 'i') } // Dynamically construct query
+                    };
+
+                    const foundedCards = await Card.find(query);
+
+                    if (foundedCards.length !== 0) {
+                        console.log('Card(s) found');
+                        res.status(200).json(foundedCards);
+                    } else {
+                        console.log('Card not found');
+                        res.status(404).json({ message: "Card not found" });
+                    }
+                } catch (error) {
+                    console.error('Error while searching card:', error);
+                    res.status(400).json({ message: "An error occurred while searching for the card" });
+                }
+            }
         }
-    } catch (error) {
-        console.error('Error while searching card:', error);
-        res.status(400).json({ message: "An error occurred while searching for the card" });
     }
-});
+);
 
 //modifying cards
 app.patch('/library/:name', verifyJWT, updatingCardValidationSchema(), async (req: Request, res: Response) => {
@@ -261,7 +258,7 @@ app.patch('/library/:name', verifyJWT, updatingCardValidationSchema(), async (re
 })
 
 // deleting cards
-app.delete('/library/:name', async (req: Request, res: Response) => {
+app.delete('/library/:name', verifyJWT, async (req: Request, res: Response) => {
     if (req.user?.role !== "admin") {
         res.status(401).json({ "message": "acces denied while deleting card" })
     } else {
@@ -286,9 +283,9 @@ app.delete('/library/:name', async (req: Request, res: Response) => {
 app.post(
     '/decks',
     verifyJWT,
-    body('deckname')
-        .notEmpty().withMessage("deckname must be provided")
-        .isString().withMessage("deckname must be a string"),
+    body('deckName')
+        .notEmpty().withMessage("deckName must be provided")
+        .isString().withMessage("deckName must be a string"),
     async (req: Request, res: Response) => {
         const errors = validationResult(req);
 
@@ -297,20 +294,26 @@ app.post(
             res.status(400).json({ errors: errors.array() });
         } else {
             try {
-                const newDeck = new Deck({
-                    deckName: req.body.deckname,
-                    owner: req.user?.name,
-                    cardList: []
-                })
-                const saveDeck = await newDeck.save()
-                if (saveDeck) {
-                    console.log(`added new deck for user: ${req.user?.name}`);
-                    res.status(201).json({
-                        message: `New deck created: ${newDeck.deckName}, for user: ${req.user?.name}`
-                    });
-                } else {
+                const findDeck = await Deck.findOne({ deckName: req.body.deckName, owner: req.user?.name })
+                if (findDeck) {
                     console.log('deck could not be saved');
-                    res.status(400).json({ message: "An error occurred while creating deck" });
+                    res.status(400).json({ message: "There is already deck with this name for this user" });
+                } else {
+                    const newDeck = new Deck({
+                        deckName: req.body.deckName,
+                        owner: req.user?.name,
+                        cardList: []
+                    })
+                    const saveDeck = await newDeck.save()
+                    if (saveDeck) {
+                        console.log(`added new deck for user: ${req.user?.name}`);
+                        res.status(201).json({
+                            message: `New deck created: ${newDeck.deckName}, for user: ${req.user?.name}`
+                        });
+                    } else {
+                        console.log('deck could not be saved');
+                        res.status(400).json({ message: "An error occurred while creating deck" });
+                    }
                 }
             } catch (error) {
                 console.error("error while creating deck:", error);
@@ -320,31 +323,18 @@ app.post(
     }
 );
 
-//searching one deck of a user by name NIE DZIAŁĄ MUSZĘ POPRACOWAĆ NAD TYM
-app.get('users/:selector/decks/:deckname', async (req: Request, res: Response) => {
-    const userSelector = decodeURIComponent(req.params.selector);
-    const deckName = decodeURIComponent(req.params.deckname);
-    console.log('Selector:', userSelector);
-    console.log('Deck Name:', deckName);
+//searching all deck with provided name
+app.get('/decks/:deckname', body('deckName'), async (req: Request, res: Response) => {
+    const selector = decodeURIComponent(req.params.deckname);
     try {
-        const findUser = await User.findOne({
-            $or: [{ name: userSelector }, { email: { $regex: `^${userSelector}$`, $options: 'i' } }]
-        });
+        const findDecks = await Deck.find({ deckName: selector });
 
-        if (findUser) {
-            console.log('Found User:', findUser);
-            const findDeck = await Deck.findOne({ deckName: deckName, owner: findUser.name });
-
-            if (findDeck) {
-                console.log('deck found');
-                res.status(200).json(findDeck.cardList);
-            } else {
-                console.log('deck could not be found');
-                res.status(404).json({ message: "Deck not found" });
-            }
+        if (findDecks.length !== 0) {
+            console.log('decks found');
+            res.status(200).json(findDecks);
         } else {
-            console.log('user not found');
-            res.status(404).json({ message: "User not found" });
+            console.log('decks could not be found');
+            res.status(404).json({ message: "Decks not found" });
         }
     } catch (error) {
         console.error("error while searching deck:", error);
@@ -382,9 +372,9 @@ app.get('/users/:selector/decks', async (req: Request, res: Response) => {
 //modyfing cardlist inside a deck
 
 // adding card into a deck
-app.patch('decks/:deckname/add-cards',
+app.patch('/deck/add-cards',
     verifyJWT,
-    body('cardlist')
+    body('cardList')
         .isArray().withMessage("card list must be provided in an array")
         .custom((value) => {
             if (value && !value.every((element: string) => typeof element === 'string')) {
@@ -399,10 +389,10 @@ app.patch('decks/:deckname/add-cards',
             res.status(400).json({ errors: errors.array() });
         } else {
             try {
-                const findDeck = await Deck.findOne({ deckName: req.params.deckname, owner: req.user?.name });
+                const findDeck = await Deck.findOne({ deckName: req.body.deckName, owner: req.user?.name });
 
                 if (findDeck) {
-                    const addPromises = req.body.cardlist.map(async (element: string) => {
+                    const addPromises = req.body.cardList.map(async (element: string) => {
                         const findCard = await Card.findOne({ name: element });
                         if (findCard) {
                             findDeck.cardList.push(element);
@@ -428,8 +418,9 @@ app.patch('decks/:deckname/add-cards',
 );
 
 // delete cards from deck
-app.patch('decks/:deckname/remove-cards',
-    body('cardlist')
+app.patch('/deck/remove-cards',
+    verifyJWT,
+    body('cardList')
         .isArray().withMessage("card list must be provided in an array")
         .custom((value) => {
             if (value && !value.every((element: string) => typeof element === 'string')) {
@@ -443,13 +434,11 @@ app.patch('decks/:deckname/remove-cards',
             console.log('Validation error');
             res.status(400).json({ errors: errors.array() });
         } else {
-            const userSelector = decodeURIComponent(req.params.selector);
             try {
 
-                const findDeck = await Deck.findOne({ deckName: req.params.deckname, owner: req.user?.name });
-
+                const findDeck = await Deck.findOne({ deckName: req.body.deckName, owner: req.user?.name });
                 if (findDeck) {
-                    for (const element of req.body.cardlist) {
+                    for (const element of req.body.cardList) {
                         const cardIndex = findDeck.cardList.indexOf(element);
                         if (cardIndex > -1) {
                             findDeck.cardList.splice(cardIndex, 1);
@@ -474,15 +463,20 @@ app.patch('decks/:deckname/remove-cards',
 );
 
 //Delete deck
-app.delete('decks/:deckname', async (req: Request, res: Response) => {
+app.delete('/decks/:deckname', verifyJWT, async (req: Request, res: Response) => {
     const deckName = decodeURIComponent(req.params.deckname);
     try {
 
         const findDeck = await Deck.findOneAndDelete({ deckName: deckName, owner: req.user?.name });
 
         if (findDeck) {
-            console.log('deck deleted');
-            res.status(204).json({ "message": "deck deleted" });
+            if (req.user?.role === "admin" || findDeck.owner === req.user?.name) {
+                console.log('deck deleted');
+                res.status(204).json({ "message": "deck deleted" });
+            } else {
+                console.log('invalid permissions')
+                res.status(401).json({ "message": "invalid persmissions" })
+            }
         } else {
             console.log('deck not found');
             res.status(404).json({ message: "Deck not found" });

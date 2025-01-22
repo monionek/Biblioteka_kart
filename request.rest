@@ -1,18 +1,26 @@
-GET https://localhost:8443/users/Maks
-
-
-###
 
 POST https://localhost:8443/users
 Content-Type: application/json
 
 {
-    "name": "Admin",
-    "email": "admin@example.com",
-    "password": "password",
-    "role": "admin"
+    "name": "Jax",
+    "email": "Jax@example.com",
+    "password": "password"
 }
+###
+GET https://localhost:8443/users/Maks
+####
+PATCH https://localhost:8443/users/Maks
+Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6IjY3OTBlNDhiMTRjZWUxZDQ4MWQ2MDljZiIsInJvbGUiOiJhZG1pbiIsIm5hbWUiOiJBZG1pbiIsImlhdCI6MTczNzU1NDMzOSwiZXhwIjoxNzM3NTU3OTM5fQ.40ksC-BvdcFmH_NVAmOeI1hzmTVDvxU9X3htjyeraKk
+Content-Type: application/json
 
+{
+    "name": "Marek",
+    "email": "Marek@example.com"
+}
+###
+DELETE  https://localhost:8443/users/Jax
+Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6IjY3OTBlNDhiMTRjZWUxZDQ4MWQ2MDljZiIsInJvbGUiOiJhZG1pbiIsIm5hbWUiOiJBZG1pbiIsImlhdCI6MTczNzU1MDU5MywiZXhwIjoxNzM3NTU0MTkzfQ.wDimuCChae2j1ZQZmvveD33D4T3XZqyxqln7UdqOoLU
 ####
 POST https://localhost:8443/login
 Content-Type: application/json
@@ -22,26 +30,71 @@ Content-Type: application/json
     "password": "password"
 }
 
-####
-POST https://localhost:8443/users/login
+###
+POST https://localhost:8443/library
+Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6IjY3OTBlNDhiMTRjZWUxZDQ4MWQ2MDljZiIsInJvbGUiOiJhZG1pbiIsIm5hbWUiOiJBZG1pbiIsImlhdCI6MTczNzU1MDU5MywiZXhwIjoxNzM3NTU0MTkzfQ.wDimuCChae2j1ZQZmvveD33D4T3XZqyxqln7UdqOoLU
 Content-Type: application/json
 
 {
-    "name": "Maks",
-    "password": "password"
+    "name": "Kathali Cleric",
+    "rarity": "common",
+    "color": ["white"],
+    "type": "creature - cat cleric",
+    "cost": {"white": 2, "green": 1},
+    "attack": 2,
+    "toughness": 3,
+    "description": "Lifelink, ward - 2"
 }
 
-####
-PATCH https://localhost:8443/users/Maks
-Authorization: Bearer "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6IjY3ODJiYTA3NjI1Y2ZlMWZiNDMwMGJkZSIsInJvbGUiOiJhZG1pbiIsIm5hbWUiOiJBZG1pbiIsImlhdCI6MTczNjc5NjU1MSwiZXhwIjoxNzM2ODAwMTUxfQ.ghuh0-6JceNsDIaunR3lwrZRORnTwGlKsVr7TDaEPs0"
+###
+GET https://localhost:8443/library/Ajani%20Restoration
+###
+PATCH https://localhost:8443/library/Ajani%20Restoration
+Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6IjY3OTBlNDhiMTRjZWUxZDQ4MWQ2MDljZiIsInJvbGUiOiJhZG1pbiIsIm5hbWUiOiJBZG1pbiIsImlhdCI6MTczNzU2ODM0MSwiZXhwIjoxNzM3NTcxOTQxfQ.pvpSywNzmvvpJVDaDObZpCwKGZcf4VYW7dA2gBqgc_I
 Content-Type: application/json
 
 {
-    "name": "Marek"
+    "rarity": "mythic"
+}
+###
+DELETE https://localhost:8443/library/Ajani%20Restoration
+Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6IjY3OTBlNDhiMTRjZWUxZDQ4MWQ2MDljZiIsInJvbGUiOiJhZG1pbiIsIm5hbWUiOiJBZG1pbiIsImlhdCI6MTczNzU2ODM0MSwiZXhwIjoxNzM3NTcxOTQxfQ.pvpSywNzmvvpJVDaDObZpCwKGZcf4VYW7dA2gBqgc_I
+###
+POST https://localhost:8443/decks
+Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6IjY3OTBlYjhmOThlODM1NGQwYTBhZjljZiIsInJvbGUiOiJ1c2VyIiwibmFtZSI6Ik1hcmVrIiwiaWF0IjoxNzM3NTU0NDkzLCJleHAiOjE3Mzc1NTgwOTN9.07Q3LY1SqgUQ3_kSotyVQHJ-4ix_RvTWE0PLOuhZmkI
+Content-Type: application/json
+
+{
+    "deckName": "Koty Szoty"
+}
+###ge
+GET https://localhost:8443/users/Admin/decks
+###
+GET https://localhost:8443/decks/Koty%20Szoty
+###
+PATCH https://localhost:8443/deck/add-cards
+Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6IjY3OTBlYjhmOThlODM1NGQwYTBhZjljZiIsInJvbGUiOiJ1c2VyIiwibmFtZSI6Ik1hcmVrIiwiaWF0IjoxNzM3NTU0NDkzLCJleHAiOjE3Mzc1NTgwOTN9.07Q3LY1SqgUQ3_kSotyVQHJ-4ix_RvTWE0PLOuhZmkI
+Content-Type: application/json
+
+{
+    "deckName": "Koty Szoty",
+    "cardList": ["Ajani Restoration", "Kathali Cleric"]
+}
+###
+PATCH https://localhost:8443/deck/remove-cards
+Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6IjY3OTBlYjhmOThlODM1NGQwYTBhZjljZiIsInJvbGUiOiJ1c2VyIiwibmFtZSI6Ik1hcmVrIiwiaWF0IjoxNzM3NTU0NDkzLCJleHAiOjE3Mzc1NTgwOTN9.07Q3LY1SqgUQ3_kSotyVQHJ-4ix_RvTWE0PLOuhZmkI
+Content-Type: application/json
+
+{
+    "deckName": "Koty Szoty",
+    "cardList": ["Ajani Restoration"]
+}
+###
+DELETE https://localhost:8443/decks
+Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6IjY3OTBlYjhmOThlODM1NGQwYTBhZjljZiIsInJvbGUiOiJ1c2VyIiwibmFtZSI6Ik1hcmVrIiwiaWF0IjoxNzM3NTU0NDkzLCJleHAiOjE3Mzc1NTgwOTN9.07Q3LY1SqgUQ3_kSotyVQHJ-4ix_RvTWE0PLOuhZmkI
+Content-Type: application/json
+
+{
+    "deckName": "Koty Szoty"
 }
 
-####
-GET https://localhost:8443/library/common
-
-####
-GET https://localhost:8443/users/Admin/decks/Deck1

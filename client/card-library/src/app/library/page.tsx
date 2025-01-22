@@ -1,6 +1,6 @@
 'use client';
 import { useState } from "react";
-import { getCards } from "../utils/CardOperations";
+import { getCards, deleteCard } from "../utils/CardOperations";
 
 type Card = {
     name: string;
@@ -18,7 +18,6 @@ export default function Library() {
     const [searchValue, setSearchValue] = useState<string>("");
     const [cards, setCards] = useState<Card[]>([]);
     const [errorMessage, setErrorMessage] = useState<string>("");
-    const [isLoading, setIsLoading] = useState<boolean>(false);
 
     const handleSearch = async (e: React.FormEvent<HTMLFormElement>) => {
         e.preventDefault();
@@ -27,10 +26,11 @@ export default function Library() {
             return;
         }
         setErrorMessage("");
-        setIsLoading(true);
 
         try {
-            const result = await getCards(searchValue);
+            // Przekazywanie searchQuery i searchValue do getCards
+            const result = await getCards(searchQuery, searchValue);
+
             if (result.length === 0) {
                 setErrorMessage("No cards found.");
             } else {
@@ -39,11 +39,21 @@ export default function Library() {
         } catch (error) {
             console.error(error);
             setErrorMessage("Unexpected error occurred.");
-        } finally {
-            setIsLoading(false);
         }
     };
-
+    const handleDelete = async (name: string) => {
+        try {
+            const deleted = await deleteCard(name)
+            if (deleted) {
+                console.log("card deleted");
+                window.location.reload();
+            } else {
+                console.log("failed to delete card");
+            }
+        } catch (error) {
+            console.error("Error in handleDelete:", error);
+        }
+    }
     return (
         <div>
             <h1>Library</h1>
@@ -56,8 +66,6 @@ export default function Library() {
                 >
                     <option value="name">name</option>
                     <option value="rarity">rarity</option>
-                    <option value="toughness">toughness</option>
-                    <option value="attack">attack</option>
                 </select>
 
                 <label htmlFor="card-search-value">Value:</label>
@@ -68,9 +76,7 @@ export default function Library() {
                     value={searchValue}
                     onChange={(e) => setSearchValue(e.target.value)}
                 />
-                <button id="get-card-button" type="submit" disabled={isLoading}>
-                    {isLoading ? "Loading..." : "Search"}
-                </button>
+                <button id="get-card-button" type="submit">Search</button>
             </form>
 
             <p className="error-message" aria-live="polite">{errorMessage}</p>
@@ -90,6 +96,7 @@ export default function Library() {
                                 <strong>Attack:</strong> {card.attack} |{" "}
                                 <strong>Toughness:</strong> {card.toughness} |{" "}
                                 <strong>Description:</strong> {card.description}
+                                <button id="delete_card_button" onClick={() => handleDelete(card.name)}>Delete</button>
                             </li>
                         ))}
                     </ul>

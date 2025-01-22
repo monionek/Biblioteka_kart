@@ -5,37 +5,67 @@ import axiosInstance from "../utils/fetchWithAgent";
 
 type Deck = {
     deckName: string;
-    cardList: Array<{ name: string; quantity: number }>;
+    cardList: string[];
     owner: string;
 };
 
 export default function DecksPage() {
-    const [userSelector, setUserSelector] = useState<string>("");
-    const [deckName, setDeckName] = useState<string>("");
+    const [searchInput, setSearchInput] = useState<string>("");
+    const [searchMode, setSearchMode] = useState<string>("deckName"); // Tryb wyszukiwania: "deckName" lub "owner"
     const [decks, setDecks] = useState<Deck[]>([]);
-    const [deckDetails, setDeckDetails] = useState<Deck | null>(null);
     const [newDeckName, setNewDeckName] = useState<string>("");
     const [errorMessage, setErrorMessage] = useState<string>("");
     const [successMessage, setSuccessMessage] = useState<string>("");
-    const [isLoading, setIsLoading] = useState<boolean>(false);
 
+    const handleDeleteDeck = async (deckName: string) => {
+        try {
+            const token = localStorage.getItem("jwt");
+
+            if (!token) {
+                setErrorMessage("Unauthorized. Please log in to delete a deck.");
+                return;
+            }
+
+            const encodedDeckName = encodeURIComponent(deckName);
+
+            const response = await axiosInstance.delete(
+                `/decks/${encodedDeckName}`,
+                {
+                    headers: {
+                        Authorization: `Bearer ${token}`,
+                    },
+                }
+            );
+
+            setSuccessMessage(response.data.message);
+            setNewDeckName("");
+        } catch (error) {
+            console.log(error);
+        }
+    };
     const handleSearchDecks = async () => {
-        if (!userSelector.trim()) {
-            setErrorMessage("Please enter a valid user name or email.");
+        if (!searchInput.trim()) {
+            setErrorMessage("Please enter a valid input.");
             return;
         }
 
         setErrorMessage("");
-        setIsLoading(true);
+        setDecks([]);
 
         try {
-            const response = await axiosInstance.get(`/users/${encodeURIComponent(userSelector)}/decks`);
-            setDecks(response.data);
-        } catch (error) {
-            console.error("Error fetching decks:", error);
-            setErrorMessage("Failed to fetch decks. Please check the user and try again.");
-        } finally {
-            setIsLoading(false);
+            if (searchMode === "deckName") {
+                const deckResponse = await axiosInstance.get(`/decks/${encodeURIComponent(searchInput)}`);
+                setDecks(deckResponse.data);
+            } else if (searchMode === "owner") {
+                const userResponse = await axiosInstance.get(`/users/${encodeURIComponent(searchInput)}/decks`);
+                setDecks(userResponse.data);
+            }
+        } catch (error: any) {
+            if (error.response?.status === 404) {
+                setErrorMessage("No decks or user found for the provided input.");
+            } else {
+                setErrorMessage("An error occurred while searching for decks.");
+            }
         }
     };
 
@@ -47,22 +77,18 @@ export default function DecksPage() {
 
         setErrorMessage("");
         setSuccessMessage("");
-        setIsLoading(true);
 
         try {
-            // Pobierz token z localStorage lub innego źródła
             const token = localStorage.getItem("jwt");
 
             if (!token) {
                 setErrorMessage("Unauthorized. Please log in to create a deck.");
-                setIsLoading(false);
                 return;
             }
 
-            // Wykonaj żądanie z niestandardowymi nagłówkami
             const response = await axiosInstance.post(
                 `/decks`,
-                { deckname: newDeckName },
+                { deckName: newDeckName },
                 {
                     headers: {
                         Authorization: `Bearer ${token}`,
@@ -79,28 +105,34 @@ export default function DecksPage() {
                 setErrorMessage("Failed to create deck. Please try again.");
             }
             console.error("Error creating deck:", error);
-        } finally {
-            setIsLoading(false);
         }
     };
 
     return (
         <div>
-            <h1>User Decks</h1>
+            <h1>Search and Manage Decks</h1>
 
-            {/* Search All Decks */}
+            {/* Search All Decks or User's Decks */}
             <div>
-                <label htmlFor="userSelector">User Name or Email:</label>
+                <label htmlFor="searchMode">Search by:</label>
+                <select
+                    id="searchMode"
+                    value={searchMode}
+                    onChange={(e) => setSearchMode(e.target.value)}
+                >
+                    <option value="deckName">Deck Name</option>
+                    <option value="owner">Deck Owner</option>
+                </select>
+
+                <label htmlFor="searchInput">Search Input:</label>
                 <input
                     type="text"
-                    id="userSelector"
-                    value={userSelector}
-                    onChange={(e) => setUserSelector(e.target.value)}
-                    placeholder="Enter user name or email"
+                    id="searchInput"
+                    value={searchInput}
+                    onChange={(e) => setSearchInput(e.target.value)}
+                    placeholder={`Enter ${searchMode === "deckName" ? "deck name" : "owner name"}`}
                 />
-                <button onClick={handleSearchDecks} disabled={isLoading}>
-                    {isLoading ? "Loading..." : "Search All Decks"}
-                </button>
+                <button onClick={handleSearchDecks}>Search Decks</button>
             </div>
 
             {/* Create New Deck */}
@@ -113,9 +145,7 @@ export default function DecksPage() {
                     onChange={(e) => setNewDeckName(e.target.value)}
                     placeholder="Enter new deck name"
                 />
-                <button onClick={handleCreateDeck} disabled={isLoading}>
-                    {isLoading ? "Loading..." : "Create Deck"}
-                </button>
+                <button onClick={handleCreateDeck}>Create Deck</button>
             </div>
 
             {/* Error and Success Messages */}
@@ -124,17 +154,30 @@ export default function DecksPage() {
 
             {/* Display All Decks */}
             <div>
-                <h2>All Decks</h2>
-                {decks && decks.length > 0 ? (
+                <h2>Search Results</h2>
+                {decks.length > 0 ? (
                     <ul>
                         {decks.map((deck, index) => (
                             <li key={index}>
                                 <strong>Name:</strong> {deck.deckName} | <strong>Owner:</strong> {deck.owner}
+                                <div>
+                                    <strong>Card List:</strong>
+                                    {deck.cardList.length > 0 ? (
+                                        <ul>
+                                            {deck.cardList.map((card, cardIndex) => (
+                                                <li key={cardIndex}>{card}</li>
+                                            ))}
+                                        </ul>
+                                    ) : (
+                                        <p>No cards in this deck.</p>
+                                    )}
+                                </div>
+                                <button id="delete-deck-button" onClick={() => handleDeleteDeck(deck.deckName)}>Delete</button>
                             </li>
                         ))}
                     </ul>
                 ) : (
-                    !isLoading && <p>No decks found.</p>
+                    <p>No decks found.</p>
                 )}
             </div>
         </div>
