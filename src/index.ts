@@ -1,5 +1,5 @@
-import express, { Request, Response, NextFunction } from 'express';
-import { param, validationResult, body, checkSchema } from 'express-validator';
+import express, { Request, Response } from 'express';
+import { validationResult, body } from 'express-validator';
 import dotenv from 'dotenv';
 import mongoose from 'mongoose';
 import jwt from 'jsonwebtoken';
@@ -14,23 +14,22 @@ import { createEmailChain, createNameChain, createPasswordChain } from "../utils
 import { hashPassword, verifyPassword } from "../utils/cryptingPassword";
 import verifyJWT from '../utils/veryfingJSW';
 import cors from 'cors';
+import WebSocket, { WebSocketServer } from 'ws';
 
 const corsOptions = {
     origin: 'https://172.20.44.64:3000',  // frontend URL, z którego będą pochodziły zapytania
-    methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE'],
+    methods: ['GET', 'POST', 'PATCH', 'DELETE'],
     allowedHeaders: ['Content-Type', 'Authorization'],  // Dozwolone nagłówki
 };
 
 const app = express();
 dotenv.config();
 const port = process.env.PORT || 8443;
-const mongoUrl = process.env.MONGO_URL || "mongodb://localhost:27017/CardLibrary";
-const privateKey = fs.readFileSync('src/ssl/private.key', 'utf8');
-const certificate = fs.readFileSync('src/ssl/certificate.crt', 'utf8');
-const ca = fs.readFileSync('src/ssl/csr.pem', 'utf8');
-
-const credentials = { key: privateKey, cert: certificate, ca: ca };
-
+const mongoUrl = process.env.MONGO_URL
+const privateKey = fs.readFileSync('src/ssl/key.pem', 'utf8');
+const certificate = fs.readFileSync('src/ssl/cert.pem', 'utf8')
+const server = https.createServer({ key: privateKey, cert: certificate }, app);
+const wss = new WebSocketServer({ server });
 mongoose.connect(mongoUrl).then(() => {
     console.log("DataBase connected");
 }).catch((error) => {
@@ -515,7 +514,45 @@ app.post('/login', async (req: Request, res: Response) => {
         res.status(400).json({ message: "An error occurred during login" });
     }
 });
-// start application
-https.createServer(credentials, app).listen(port, () => {
+
+// Typ wiadomości
+interface ChatMessage {
+    username: string;
+    content: string;
+}
+
+wss.on('connection', (ws: WebSocket) => {
+    let username: string | null = null; // Nazwa użytkownika dla tego klienta
+
+    ws.on('message', (message: string) => {
+        try {
+            const data: ChatMessage = JSON.parse(message);
+
+            if (!username) {
+                // Ustaw nazwę użytkownika po pierwszej wiadomości
+                username = data.username;
+                console.log(`Użytkownik połączony: ${username}`);
+                return;
+            }
+
+            console.log(`Otrzymano wiadomość od ${username}: ${data.content}`);
+
+            // Rozsyłanie wiadomości do wszystkich klientów
+            wss.clients.forEach((client) => {
+                if (client.readyState === WebSocket.OPEN) {
+                    const outgoingMessage: ChatMessage = {
+                        username: username || "Nieznany użytkownik", // Domyślna wartość, jeśli username jest null
+                        content: data.content,
+                    };
+                    client.send(JSON.stringify(outgoingMessage));
+                }
+            });
+        } catch (error) {
+            console.error('Błąd podczas przetwarzania wiadomości:', error);
+        }
+    });
+})
+// start app
+server.listen(port, () => {
     console.log(`Server running at https://localhost:${port}`);
 });
