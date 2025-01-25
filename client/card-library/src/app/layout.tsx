@@ -17,6 +17,7 @@ export default function RootLayout({
           <Link href="/library">Library</Link>
           <Link href="/library/add-card">Add new Card</Link>
           <Link href="/decks">Decks</Link>
+          <Link href="/chat">Chat</Link>
         </div>
         {children}
       </body>

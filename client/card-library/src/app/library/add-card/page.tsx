@@ -30,15 +30,15 @@ export default function CardForm() {
     const handleColorChange = (color: string) => {
         setSelectedColors((prev) =>
             prev.includes(color)
-                ? prev.filter((c) => c !== color) // Usuń, jeśli już istnieje
-                : [...prev, color] // Dodaj, jeśli nie istnieje
+                ? prev.filter((c) => c !== color)
+                : [...prev, color]
         );
     };
 
     const handleCostChange = (color: string, value: string) => {
         setCost((prev) => ({
             ...prev,
-            [color]: Math.max(0, Number(value)) || 0, // Zapewnij, że koszt nie jest ujemny
+            [color]: Math.max(0, Number(value)) || 0,
         }));
     };
 
@@ -58,15 +58,8 @@ export default function CardForm() {
                 newCard.attack = attack;
                 newCard.toughness = toughness;
             }
-            const token = localStorage.getItem("jwt");
-            if (!token) {
-                console.error("No token found.");
-                return false;
-            }
             const response = await axiosInstance.post("/library", newCard, {
-                headers: {
-                    Authorization: `Bearer ${token}`,
-                },
+                withCredentials: true
             })
             if (response.status === 201) {
                 console.log("dodana")

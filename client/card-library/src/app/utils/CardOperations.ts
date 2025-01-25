@@ -26,16 +26,8 @@ export async function getCards(selector: string, value: string) {
 
 export async function deleteCard(name: string) {
     try {
-        const token = localStorage.getItem("jwt");
-
-        if (!token) {
-            console.error("No token found.");
-            return false;
-        }
         const response = await axiosInstance.delete(`/library/${name}`, {
-            headers: {
-                Authorization: `Bearer ${token}`,
-            },
+            withCredentials: true
         });
 
         if (response.status === 200) {
@@ -44,9 +36,9 @@ export async function deleteCard(name: string) {
         console.error("Unexpected response:", response.data);
         return false;
     } catch (error: any) {
-        console.error("Error while deleting user: ", error);
+        console.error("Error while deleting Card: ", error);
         if (error.response?.status === 404) {
-            console.log("User not found.");
+            console.log("Card not found.");
         }
         return false;
     }

@@ -6,5 +6,8 @@ declare namespace NodeJS {
         ALLOWED_COLORS: string;
         JWT_SECRET: string;
         JWT_EXPIRATION: string;
+        MQTT_URL_BACKEND: string;
+        MQTT_LOGIN: string;
+        MGTT_PASSWORD: string;
     }
 }

@@ -28,16 +28,8 @@ export async function searchUser(selector: string) {
 
 export async function deleteUser(selector: string): Promise<boolean> {
     try {
-        const token = localStorage.getItem("jwt");
-
-        if (!token) {
-            console.error("No token found.");
-            return false;
-        }
         const response = await axiosInstance.delete(`/users/${selector}`, {
-            headers: {
-                Authorization: `Bearer ${token}`,
-            },
+            withCredentials: true
         });
 
         if (response.status === 200) {
@@ -56,20 +48,11 @@ export async function deleteUser(selector: string): Promise<boolean> {
 
 export async function modifyUser(selector: string, data: { [key: string]: any }): Promise<boolean> {
     try {
-        const token = localStorage.getItem("jwt");
-
-        if (!token) {
-            console.error("No token found.");
-            return false;
-        }
-
         const response = await axiosInstance.patch(`/users/${selector}`, data, {
-            headers: {
-                Authorization: `Bearer ${token}`,
-            },
+            withCredentials: true
         });
 
-        return response.status === 200;
+        return true;
     } catch (error: any) {
         console.error("Error in modifyUser:", error);
         return false;

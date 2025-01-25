@@ -19,21 +19,12 @@ export default function DecksPage() {
 
     const handleDeleteDeck = async (deckName: string) => {
         try {
-            const token = localStorage.getItem("jwt");
-
-            if (!token) {
-                setErrorMessage("Unauthorized. Please log in to delete a deck.");
-                return;
-            }
-
             const encodedDeckName = encodeURIComponent(deckName);
 
             const response = await axiosInstance.delete(
                 `/decks/${encodedDeckName}`,
                 {
-                    headers: {
-                        Authorization: `Bearer ${token}`,
-                    },
+                    withCredentials: true
                 }
             );
 
@@ -79,20 +70,11 @@ export default function DecksPage() {
         setSuccessMessage("");
 
         try {
-            const token = localStorage.getItem("jwt");
-
-            if (!token) {
-                setErrorMessage("Unauthorized. Please log in to create a deck.");
-                return;
-            }
-
             const response = await axiosInstance.post(
                 `/decks`,
                 { deckName: newDeckName },
                 {
-                    headers: {
-                        Authorization: `Bearer ${token}`,
-                    },
+                    withCredentials: true
                 }
             );
 

@@ -2,7 +2,7 @@ import express, { Request, Response } from 'express';
 import { validationResult, body } from 'express-validator';
 import dotenv from 'dotenv';
 import mongoose from 'mongoose';
-import jwt from 'jsonwebtoken';
+import jwt, { MyJwtPayload } from 'jsonwebtoken';
 import fs from 'fs';
 import https from 'https';
 import User from "../schemes/Users";
@@ -15,11 +15,14 @@ import { hashPassword, verifyPassword } from "../utils/cryptingPassword";
 import verifyJWT from '../utils/veryfingJSW';
 import cors from 'cors';
 import WebSocket, { WebSocketServer } from 'ws';
+import cookieParser from 'cookie-parser';
+import mqtt from 'mqtt'
 
 const corsOptions = {
-    origin: 'https://172.20.44.64:3000',  // frontend URL, z którego będą pochodziły zapytania
+    origin: ['https://172.20.44.64:3000', 'https://localhost:3000'],  // frontend URL
     methods: ['GET', 'POST', 'PATCH', 'DELETE'],
-    allowedHeaders: ['Content-Type', 'Authorization'],  // Dozwolone nagłówki
+    allowedHeaders: ['Content-Type', 'Authorization'],
+    credentials: true
 };
 
 const app = express();
@@ -30,13 +33,14 @@ const privateKey = fs.readFileSync('src/ssl/key.pem', 'utf8');
 const certificate = fs.readFileSync('src/ssl/cert.pem', 'utf8')
 const server = https.createServer({ key: privateKey, cert: certificate }, app);
 const wss = new WebSocketServer({ server });
+let messageCount = 0;
 mongoose.connect(mongoUrl).then(() => {
     console.log("DataBase connected");
 }).catch((error) => {
     console.log(error);
 })
 
-app.use(express.json(), cors(corsOptions));
+app.use(express.json(), cors(corsOptions), cookieParser());
 
 //CRUD user
 //adding new users
@@ -506,6 +510,13 @@ app.post('/login', async (req: Request, res: Response) => {
                     { expiresIn: process.env.JWT_EXPIRATION || '1h' }
                 );
                 console.log(`login successful, ${user.name}`);
+                res.cookie('token', token, {
+                    httpOnly: true,
+                    secure: true,
+                    sameSite: 'none',
+                    maxAge: 3600000,
+                    domain: 'localhost',
+                });
                 res.status(200).json({ token });
             }
         }
@@ -514,44 +525,67 @@ app.post('/login', async (req: Request, res: Response) => {
         res.status(400).json({ message: "An error occurred during login" });
     }
 });
-
-// Typ wiadomości
-interface ChatMessage {
-    username: string;
-    content: string;
-}
-
-wss.on('connection', (ws: WebSocket) => {
-    let username: string | null = null; // Nazwa użytkownika dla tego klienta
-
-    ws.on('message', (message: string) => {
+app.get('/check-auth', verifyJWT, (req, res) => {
+    res.status(200).json({ message: 'Jesteś zalogowany' });
+});
+app.post('/logout', verifyJWT, (req, res) => {
+    console.log("logout")
+    res.status(200).json({ message: 'Jesteś wylogowany' });
+});
+wss.on('connection', (ws, req: Request) => {
+    const urlParams = new URLSearchParams(req.url.split('?')[1]);
+    const token = urlParams.get('token');
+    const user = {
+        name: "Guest",
+        role: "guest"
+    };
+    if (token !== null) {
+        let decoded;
         try {
-            const data: ChatMessage = JSON.parse(message);
-
-            if (!username) {
-                // Ustaw nazwę użytkownika po pierwszej wiadomości
-                username = data.username;
-                console.log(`Użytkownik połączony: ${username}`);
-                return;
-            }
-
-            console.log(`Otrzymano wiadomość od ${username}: ${data.content}`);
-
-            // Rozsyłanie wiadomości do wszystkich klientów
-            wss.clients.forEach((client) => {
-                if (client.readyState === WebSocket.OPEN) {
-                    const outgoingMessage: ChatMessage = {
-                        username: username || "Nieznany użytkownik", // Domyślna wartość, jeśli username jest null
-                        content: data.content,
-                    };
-                    client.send(JSON.stringify(outgoingMessage));
-                }
-            });
-        } catch (error) {
-            console.error('Błąd podczas przetwarzania wiadomości:', error);
+            decoded = jwt.verify(token, process.env.JWT_SECRET) as MyJwtPayload;
+        } catch (err) {
+            ws.send("Invalid token!");
+            ws.close();
+            return;
         }
+        user.name = decoded.name
+        user.role = decoded.role
+    }
+
+
+    ws.send(`Hello ${user.name}! Your role ${user.role}.`);
+
+    ws.on('message', (message) => {
+        console.log(`message acquired: ${message}`);
+        messageCount++;
+
+        const formattedMessage = `${user.name} (${user.role}): ${message}`;
+        mqttClient.publish('chat/numberOfMessages', String(messageCount));
+        wss.clients.forEach((client) => {
+            if (client.readyState === WebSocket.OPEN) {
+                client.send(formattedMessage);
+            }
+        });
     });
-})
+
+    ws.on('close', () => {
+        console.log(`${user.name} disconnectd.`);
+    });
+});
+const mqttClient = mqtt.connect(process.env.MQTT_URL_BACKEND, {
+    username: process.env.MQTT_LOGIN,
+    password: process.env.MQTT_PASSWORD,
+});
+mqttClient.on('message', (topic, message) => {
+    if (topic === 'chat/numberOfMessages') {
+        const messageCount = parseInt(message.toString());
+        wss.clients.forEach((client) => {
+            if (client.readyState === WebSocket.OPEN) {
+                client.send(`There are currently ${messageCount} messages in the chat.`);
+            }
+        });
+    }
+});
 // start app
 server.listen(port, () => {
     console.log(`Server running at https://localhost:${port}`);

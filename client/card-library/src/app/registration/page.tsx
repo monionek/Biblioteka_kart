@@ -11,10 +11,9 @@ export default function RegisterPage() {
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
-        setMessage(""); // Resetujemy komunikaty
+        setMessage("");
 
         try {
-            // Wysyłamy dane do endpointu '/users'
             const response = await axiosInstance.post("/users", {
                 name,
                 email,
@@ -29,7 +28,6 @@ export default function RegisterPage() {
             }
         } catch (error: any) {
             if (error.response && error.response.data) {
-                // Obsługa błędów zwróconych przez API
                 setMessage(`Błąd: ${error.response.data.message}`);
             } else {
                 setMessage("Wystąpił błąd podczas rejestracji.");

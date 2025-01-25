@@ -1,78 +1,109 @@
 'use client';
 import { useEffect, useState } from 'react';
+import mqtt from 'mqtt';
+import dotenv from 'dotenv'
+dotenv.config()
 
 export default function ChatPage() {
-    const [messages, setMessages] = useState<{ username: string; content: string }[]>([]);
+    const [messages, setMessages] = useState<string[]>([]);
     const [inputValue, setInputValue] = useState('');
     const [ws, setWs] = useState<WebSocket | null>(null);
-    const [username, setUsername] = useState(''); // Pole na nazwę użytkownika
+    const [messageCount, setMessageCount] = useState<number>(0);  // Liczba wiadomości
 
     useEffect(() => {
-        if (username) {
-            // Połącz z serwerem WebSocket po ustawieniu nazwy użytkownika
-            const socket = new WebSocket('wss://localhost:8443/ws');
-            setWs(socket);
+        const token = localStorage.getItem('jwt');
+        const socketUrl = token
+            ? `wss://localhost:8443/ws?token=${token}`
+            : `wss://localhost:8443/ws`;
+        const socket = new WebSocket(socketUrl);
 
-            // Obsługa wiadomości przychodzących
-            socket.onmessage = (event) => {
-                const data = JSON.parse(event.data);
-                setMessages((prev) => [...prev, data]);
-            };
+        setWs(socket);
 
-            // Obsługa zamykania połączenia
-            socket.onclose = () => {
-                console.log('Połączenie zamknięte.');
-            };
+        socket.onopen = () => {
+            console.log('WebSocket connection established.');
+        };
 
-            // Czyszczenie połączenia
-            return () => {
+        socket.onmessage = (event) => {
+            const message = event.data;
+            setMessages((prev) => [...prev, message]);
+        };
+
+        socket.onerror = (error) => {
+            console.error('WebSocket error:', error);
+        };
+
+        socket.onclose = (event) => {
+            console.log('WebSocket connection closed.', event.reason);
+        };
+
+        const mqttClient = mqtt.connect("wss://b8d4a9cd429f42bf87519d8748e76d77.s1.eu.hivemq.cloud:8884/mqtt", {
+            username: 'Admin',
+            password: 'Miodekplodek1',
+        });
+
+        mqttClient.on('connect', () => {
+            console.log('Connected to MQTT broker');
+            mqttClient.subscribe('chat/numberOfMessages', (err) => {
+                if (err) {
+                    console.error('Error subscribing to topic:', err);
+                }
+            });
+        });
+
+        mqttClient.on('message', (topic, message) => {
+            if (topic === 'chat/numberOfMessages') {
+                const newMessageCount = parseInt(message.toString(), 10);
+                setMessageCount(newMessageCount);
+            }
+        });
+
+        return () => {
+            console.log('Cleaning up WebSocket and MQTT...');
+            if (socket.readyState === WebSocket.OPEN || WebSocket.CONNECTING) {
                 socket.close();
-            };
-        }
-    }, [username]); // Zainicjuj WebSocket tylko po ustawieniu nazwy użytkownika
+            }
+            mqttClient.end();
+        };
+    }, []);
 
     const sendMessage = () => {
         if (ws && inputValue) {
-            const message = {
-                username,
-                content: inputValue,
-            };
-            ws.send(JSON.stringify(message));
+            ws.send(inputValue);
             setInputValue('');
         }
     };
 
     return (
-        <div>
-            <h1>Next.js Chat</h1>
-            {!username ? (
-                <div>
-                    <input
-                        type="text"
-                        value={username}
-                        onChange={(e) => setUsername(e.target.value)}
-                        placeholder="Wpisz swoją nazwę użytkownika..."
-                    />
-                    <button onClick={() => username && setUsername(username)}>Dołącz</button>
-                </div>
-            ) : (
-                <div>
-                    <div>
-                        {messages.map((message, index) => (
-                            <div key={index}>
-                                <strong>{message.username}:</strong> {message.content}
-                            </div>
-                        ))}
+        <div className="p-4">
+            <h1 className="text-2xl font-bold mb-4">Chat</h1>
+            <div className="border p-4 rounded-lg mb-4 h-96 overflow-y-auto bg-gray-50">
+                {messages.map((message, index) => (
+                    <div key={index} className="mb-2">
+                        <span>{message}</span>
                     </div>
-                    <input
-                        type="text"
-                        value={inputValue}
-                        onChange={(e) => setInputValue(e.target.value)}
-                        placeholder="Wpisz wiadomość..."
-                    />
-                    <button onClick={sendMessage}>Wyślij</button>
-                </div>
-            )}
+                ))}
+            </div>
+
+            {/* Wyświetlanie liczby wiadomości */}
+            <div className="mb-4">
+                <p>Messages in the chat: {messageCount}</p>
+            </div>
+
+            <div className="flex">
+                <input
+                    type="text"
+                    value={inputValue}
+                    onChange={(e) => setInputValue(e.target.value)}
+                    placeholder="Wpisz wiadomość..."
+                    className="flex-grow border rounded-l-lg p-2"
+                />
+                <button
+                    onClick={sendMessage}
+                    className="bg-blue-500 text-white px-4 py-2 rounded-r-lg"
+                >
+                    Send Message
+                </button>
+            </div>
         </div>
     );
 }

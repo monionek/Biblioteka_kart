@@ -1,73 +1,93 @@
-'use client'
+'use client';
 import { useState, useEffect } from 'react';
 import axiosInstance from '../utils/fetchWithAgent';
+import Cookies from 'js-cookie';
 
 async function login(username: string, password: string) {
     try {
-        const response = await axiosInstance.post('/login', { name: username, password });
-        // Zapisujemy token do localStorage
-        if (response.data.token) {
-            localStorage.setItem('jwt', response.data.token);
-            console.log(response.data.token)
-            return true;
+        const response = await axiosInstance.post(
+            '/login',
+            { name: username, password },
+            { withCredentials: true }
+        );
+        const jwtToken = response.data.token; // Oczekujemy tokena w odpowiedzi
+        if (jwtToken) {
+            localStorage.setItem('jwt', jwtToken); // Zapisujemy token w localStorage
         }
-        return false;
-    } catch (error) {
+        return true;
+    } catch (error: any) {
+        if (error.response && error.response.status === 401) {
+            throw new Error('Niepoprawny login lub hasło');
+        }
         console.error('Login failed:', error);
-        return false;
+        throw new Error('Invalid password or username');
     }
 }
 
 async function logout() {
-    // Usuwamy token z localStorage
-    localStorage.removeItem('jwt');
+    try {
+        await axiosInstance.post('/logout', {}, { withCredentials: true });
+
+        Cookies.remove('token');
+        Cookies.remove('session');
+        localStorage.removeItem('jwt'); // Usuwamy token z localStorage
+
+        console.log('Logged out and cookies cleared.');
+    } catch (error) {
+        console.error('Logout failed:', error);
+    }
 }
+
 export default function LoginPage() {
     const [name, setName] = useState<string>('');
     const [password, setPassword] = useState<string>('');
     const [error, setError] = useState<string>('');
     const [isLoggedIn, setIsLoggedIn] = useState<boolean>(false);
 
-    // Sprawdzanie, czy użytkownik jest zalogowany
     useEffect(() => {
-        const token = localStorage.getItem('jwt');
-        if (token) {
-            setIsLoggedIn(true);
-        }
+        axiosInstance
+            .get('/check-auth', { withCredentials: true })
+            .then(() => {
+                const jwtToken = localStorage.getItem('jwt');
+                if (jwtToken) {
+                    setIsLoggedIn(true);
+                }
+            })
+            .catch(() => setIsLoggedIn(false));
     }, []);
 
     const handleLogin = async (e: React.FormEvent<HTMLFormElement>) => {
         e.preventDefault();
         try {
-            const data = await login(name, password);
-            console.log('Zalogowano pomyślnie:', data);
-            setError(''); // Wyczyść błędy w przypadku sukcesu
+            await login(name, password);
+            setError('');
+            setIsLoggedIn(true);
         } catch (err: any) {
-            setError(err); // Wyświetl komunikat błędu
+            setError(err.message);
         }
-        window.location.reload();
     };
+
     const handleLogout = async () => {
         await logout();
         setIsLoggedIn(false);
-        window.location.reload();
     };
+
     return (
         <div>
-            <h1>{isLoggedIn ? 'Witaj, zalogowany!' : 'Strona logowania'}</h1>
+            <h1>{isLoggedIn ? 'Hello!' : 'Login in site'}</h1>
             {isLoggedIn ? (
-                <button onClick={handleLogout}>Wyloguj</button>
+                <button onClick={handleLogout}>Logout</button>
             ) : (
                 <form onSubmit={handleLogin}>
                     <input
                         type="text"
-                        placeholder="Name"
+                        placeholder="username"
                         value={name}
                         onChange={(e) => setName(e.target.value)}
                     />
                     <input
                         type="password"
-                        placeholder="Hasło"
+                        placeholder="password"
                         value={password}
                         onChange={(e) => setPassword(e.target.value)}
                     />
@@ -76,7 +96,7 @@ export default function LoginPage() {
                     </button>
                 </form>
             )}
-            {error && <p>{error}</p>}
+            {error && <p style={{ color: 'red' }}>{error}</p>}
         </div>
     );
 }
