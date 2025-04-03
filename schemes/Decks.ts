@@ -3,7 +3,7 @@ import mongoose, { Document, Schema } from 'mongoose';
 interface IDeck extends Document {
     deckName: string;
     owner: string;
-    cardList: string[]; // Tablica nazw kart
+    cardList: string[];
 }
 
 const deckSchema = new Schema<IDeck>({
